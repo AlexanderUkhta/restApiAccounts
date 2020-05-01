@@ -31,15 +31,15 @@ public class ApiController {
     @Autowired
     TransferMoneyService transferMoneyService;
 
-    @PostMapping("/acc-creating")
+    @PostMapping("/create-acc")
     public ResponseEntity<String> processAccCreating(@Valid @RequestBody TransactionDto transactionDto) {
-            return new ResponseEntity<>("'Acc-creating' processed successfully, created accountId " +
-                    createAccService.createAccount(transactionDto.getOwnerName(), transactionDto.getAmount()),
-                    HttpStatus.CREATED);
+        return new ResponseEntity<>("'Acc-creating' processed successfully, created accountId " +
+                createAccService.createAccount(transactionDto.getOwnerName(), transactionDto.getAmount()),
+                HttpStatus.CREATED);
 
     }
 
-    @PutMapping("/put-amount")
+    @PostMapping("/put-amount")
     public ResponseEntity<String> processMoneyPutting(@Valid @RequestBody TransactionDto transactionDto) {
         try {
             return new ResponseEntity<>("'Put-amount' processed successfully for account_id = " +
@@ -49,11 +49,14 @@ public class ApiController {
             return new ResponseEntity<>("'Put-amount' could not be processed, account does not exist.",
                     HttpStatus.NOT_FOUND);
 
+        } catch (InterruptedException e) {
+            return new ResponseEntity<>("'Put-amount' could not be processed, account was busy for too long.",
+                    HttpStatus.LOCKED);
         }
 
     }
 
-    @PutMapping("/withdraw-amount")
+    @PostMapping("/withdraw-amount")
     public ResponseEntity<String> processMoneyTaking(@Valid @RequestBody TransactionDto transactionDto) {
         try {
             return new ResponseEntity<>("'Withdraw-amount' processed successfully for account_id = " +
@@ -68,11 +71,14 @@ public class ApiController {
             return new ResponseEntity<>("'Withdraw-amount' could not be processed, not enough money.",
                     HttpStatus.BAD_REQUEST);
 
+        } catch (InterruptedException e) {
+            return new ResponseEntity<>("'Withdraw-amount' could not be processed, account was busy for too long.",
+                    HttpStatus.LOCKED);
         }
 
     }
 
-    @PutMapping("/transfer-amount")
+    @PostMapping("/transfer-amount")
     public ResponseEntity<String> processMoneyTransfer(@Valid @RequestBody TransactionDto transactionDto) {
         try {
             Map<String, Integer> resultIds = transferMoneyService.transferMoney(transactionDto.getAccountMain(),
@@ -90,6 +96,9 @@ public class ApiController {
             return new ResponseEntity<>("'Transfer-amount' could not be processed, not enough money on source id.",
                     HttpStatus.BAD_REQUEST);
 
+        } catch (InterruptedException e) {
+            return new ResponseEntity<>("'Transfer-amount' could not be processed, one or both accounts were busy for too long.",
+                    HttpStatus.LOCKED);
         }
 
     }

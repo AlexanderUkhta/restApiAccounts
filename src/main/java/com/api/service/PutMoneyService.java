@@ -18,9 +18,13 @@ public class PutMoneyService {
 
     @Autowired
     private AccountRepository accountRepository;
+    @Autowired
+    private LockService lockService;
 
     @Transactional
-    public Integer putMoney(final Integer accountId, final Double amount) {
+    public Integer putMoney(final Integer accountId, final Double amount) throws InterruptedException {
+        lockService.takeLock(accountId);
+
         Optional<Account> accountOptional = accountRepository.findById(accountId);
         if (!accountOptional.isPresent()) {
             logger.warn("PutMoneyService.findAccount: could not find account by id: " + accountId);
@@ -33,7 +37,9 @@ public class PutMoneyService {
         Account account = accountOptional.get();
         account.setBalance(account.getBalance() + amount);
 
-        return accountRepository.save(account).getId();
+        Integer finalId = accountRepository.save(account).getId();
+        lockService.releaseLock(accountId);
+        return finalId;
 
     }
 }

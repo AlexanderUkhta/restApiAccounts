@@ -20,11 +20,23 @@ public class TransferMoneyService {
 
     @Autowired
     AccountRepository accountRepository;
+    @Autowired
+    LockService lockService;
+
     @Transactional
-    public Map<String, Integer> transferMoney(final Integer sourceAccount, final Integer targetAccount, final Double amount) {
+    public Map<String, Integer> transferMoney(final Integer sourceAccount, final Integer targetAccount,
+                                              final Double amount) throws InterruptedException {
+        lockService.takeLock(sourceAccount < targetAccount ? sourceAccount : targetAccount);
+        lockService.takeLock(sourceAccount < targetAccount ? targetAccount : sourceAccount);
+
         Optional<Account> accountFromOptional = accountRepository.findById(sourceAccount);
         if (!accountFromOptional.isPresent()) {
             logger.warn("TransferMoneyService.findAccount: could not find source account by id: " + sourceAccount);
+            throw new NoRecordsFoundException();
+        }
+        Optional<Account> accountToOptional = accountRepository.findById(targetAccount);
+        if (!accountToOptional.isPresent()) {
+            logger.warn("TransferMoneyService.findAccount: could not find target account by id: " + targetAccount);
             throw new NoRecordsFoundException();
         }
 
@@ -33,22 +45,20 @@ public class TransferMoneyService {
             throw new NotEnoughFundsException();
         }
 
-        Optional<Account> accountToOptional = accountRepository.findById(targetAccount);
-        if (!accountToOptional.isPresent()) {
-            logger.warn("TransferMoneyService.findAccount: could not find target account by id: " + targetAccount);
-            throw new NoRecordsFoundException();
-        }
-
         Account accountFrom = accountFromOptional.get();
-        accountFrom.setBalance(accountFrom.getBalance() - amount);
         Account accountTo = accountToOptional.get();
+        accountFrom.setBalance(accountFrom.getBalance() - amount);
         accountTo.setBalance(accountTo.getBalance() + amount);
 
-        return new HashMap<String, Integer>() {{
+        Map<String, Integer> resultMap = new HashMap<String, Integer>() {{
             put("sourceId", accountRepository.save(accountFrom).getId());
             put("targetId", accountRepository.save(accountTo).getId());
         }};
 
+        lockService.releaseLock(sourceAccount);
+        lockService.releaseLock(targetAccount);
+        return resultMap;
 
     }
+
 }

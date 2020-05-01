@@ -18,9 +18,13 @@ public class WithdrawMoneyService {
 
     @Autowired
     AccountRepository accountRepository;
+    @Autowired
+    LockService lockService;
 
     @Transactional
-    public Integer withdrawMoney(final Integer accountId, final Double amount) {
+    public Integer withdrawMoney(final Integer accountId, final Double amount) throws InterruptedException {
+        lockService.takeLock(accountId);
+
         Optional<Account> accountOptional = accountRepository.findById(accountId);
         if (!accountOptional.isPresent()) {
             logger.warn("WithdrawMoneyService.findAccount: could not find account by id: " + accountId);
@@ -38,6 +42,9 @@ public class WithdrawMoneyService {
         Account account = accountOptional.get();
         account.setBalance(account.getBalance() - amount);
 
-        return accountRepository.save(account).getId();
+        Integer finalId = accountRepository.save(account).getId();
+        lockService.releaseLock(finalId);
+        return finalId;
+
    }
 }

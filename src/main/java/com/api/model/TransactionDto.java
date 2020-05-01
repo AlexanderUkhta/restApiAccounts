@@ -4,6 +4,13 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.PositiveOrZero;
 
 public class TransactionDto {
+    public TransactionDto() {
+
+    }
+    public TransactionDto (String ownerName, Double amount) {
+        this.ownerName = ownerName;
+        this.amount = amount;
+    }
 
     @NotNull(message = "'amount' should be present")
     @PositiveOrZero(message = "'amount' should not be negative")
