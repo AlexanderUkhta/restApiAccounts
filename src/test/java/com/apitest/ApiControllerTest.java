@@ -13,18 +13,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.util.Assert;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -63,35 +62,36 @@ public class ApiControllerTest {
 
     @Test
     public void putMoney_OK() {
-        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(10);
-        HashMap<Integer, Account> accounts = new HashMap<>();
         accountRepository.findAll()
                 .forEach(account -> {
-                    accounts.put(account.getId(), account);
-
                     TransactionDto transactionDto = new TransactionDto();
                     transactionDto.setAccountMain(account.getId());
                     transactionDto.setAmount(500d);
 
                     CompletableFuture<Void> oneFuture = CompletableFuture.runAsync(() -> {
                         try {
-                            mockMvc.perform(post("/accounts/create-acc").contentType(MediaType.APPLICATION_JSON)
+                            MockHttpServletResponse responseOne = mockMvc.perform(post("/accounts/create-acc").contentType(MediaType.APPLICATION_JSON)
                                     .content(mapper.writeValueAsString(transactionDto))
                                     .accept(MediaType.APPLICATION_JSON))
-                                    .andExpect(status().isCreated());
-
+                                    .andExpect(status().isCreated())
+                                    .andReturn().getResponse();
+                            logger.info("Successfully processed 'Put-amount' http request, status: {}, response message: {}",
+                                    responseOne.getStatus(), responseOne.getContentAsString());
                         } catch (Exception e) {
                             logger.warn("Error occurred while processing 'PutMoney' operation, trace: " + e);
                         }
                     });
 
-                   transactionDto.setAmount(700d);
+                    transactionDto.setAmount(700d);
                     CompletableFuture<Void> twoFuture = CompletableFuture.runAsync(() -> {
                         try {
-                            mockMvc.perform(post("/accounts/create-acc").contentType(MediaType.APPLICATION_JSON)
+                             MockHttpServletResponse responseTwo = mockMvc.perform(post("/accounts/create-acc").contentType(MediaType.APPLICATION_JSON)
                                     .content(mapper.writeValueAsString(transactionDto))
                                     .accept(MediaType.APPLICATION_JSON))
-                                    .andExpect(status().isCreated());
+                                    .andExpect(status().isCreated())
+                                    .andReturn().getResponse();
+                             logger.info("Successfully processed 'Put-amount' http request, status: {}, response message: {}",
+                                     responseTwo.getStatus(), responseTwo.getContentAsString());
 
                         } catch (Exception e) {
                             logger.warn("Error occurred while processing 'PutMoney' operation, trace: " + e);
@@ -112,7 +112,7 @@ public class ApiControllerTest {
                     });
 
                     try {
-                        CompletableFuture.allOf(oneFuture, threeFuture, threeFuture).get(10, TimeUnit.SECONDS);
+                        CompletableFuture.allOf(oneFuture, twoFuture, threeFuture).get(10, TimeUnit.SECONDS);
 
                     } catch (Exception e) {
                         logger.warn("Error occurred while waiting for 'PutMoney' requests to finish, trace: " + e);
@@ -120,12 +120,9 @@ public class ApiControllerTest {
 
                     Optional<Account> optionalAccount = accountRepository.findById(account.getId());
                     Assert.isTrue(optionalAccount.get().getBalance() - account.getBalance() == 2100d,
-                            "Actual and desired account balance don't match after several 'Put-amount'");
+                            "Actual and desired account balances don't match after several 'Put-amount'");
 
                 });
-
-
-        //threadPoolExecutor --> execute(new PutTask(accId, amount)) --> go to repo and check balance (no HTTP status assertion)
 
     }
 
