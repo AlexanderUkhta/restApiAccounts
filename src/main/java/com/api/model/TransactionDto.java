@@ -50,4 +50,12 @@ public class TransactionDto {
     public void setOwnerName(String ownerName) {
         this.ownerName = ownerName;
     }
+
+    @Override
+    public String toString() {
+        return "accountMain: " + accountMain +
+                " accountExternal: " + accountExternal +
+                " ownerName: " + ownerName +
+                " amount: " + amount;
+    }
 }

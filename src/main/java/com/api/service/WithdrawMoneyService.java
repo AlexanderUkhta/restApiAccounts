@@ -23,28 +23,32 @@ public class WithdrawMoneyService {
 
     @Transactional
     public Integer withdrawMoney(final Integer accountId, final Double amount) throws InterruptedException {
-        lockService.takeLock(accountId);
+        try {
+            lockService.takeLock(accountId);
 
-        Optional<Account> accountOptional = accountRepository.findById(accountId);
-        if (!accountOptional.isPresent()) {
-            logger.warn("WithdrawMoneyService.findAccount: could not find account by id: " + accountId);
-            throw new NoRecordsFoundException();
+            Optional<Account> accountOptional = accountRepository.findById(accountId);
+            if (!accountOptional.isPresent()) {
+                logger.warn("WithdrawMoneyService.findAccount: could not find account by id: " + accountId);
+                throw new NoRecordsFoundException();
+            }
+
+            if (Double.compare(accountOptional.get().getBalance(), amount) < 0) {
+                logger.warn("WithdrawMoneyService.findAccount: balance is less than desired amount, id: " + accountId);
+                throw new NotEnoughFundsException();
+            }
+
+            logger.info("WithdrawMoneyService.findAccount - found account by id: {}. " +
+                    "Payload is: {}", accountId, accountOptional.get());
+
+            Account account = accountOptional.get();
+            account.setBalance(account.getBalance() - amount);
+
+            return accountRepository.saveAndFlush(account).getId();
+
+        } finally {
+            lockService.releaseLock(accountId);
+
         }
-
-        if (Double.compare(accountOptional.get().getBalance(), amount) < 0) {
-            logger.warn("WithdrawMoneyService.findAccount: balance is less than desired amount, id: " + accountId);
-            throw new NotEnoughFundsException();
-        }
-
-        logger.info("WithdrawMoneyService.findAccount - found account by id: {}. " +
-                "Payload is: {}", accountId, accountOptional.get());
-
-        Account account = accountOptional.get();
-        account.setBalance(account.getBalance() - amount);
-
-        Integer finalId = accountRepository.save(account).getId();
-        lockService.releaseLock(finalId);
-        return finalId;
 
    }
 }

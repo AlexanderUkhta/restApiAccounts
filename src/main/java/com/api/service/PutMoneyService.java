@@ -23,23 +23,28 @@ public class PutMoneyService {
 
     @Transactional
     public Integer putMoney(final Integer accountId, final Double amount) throws InterruptedException {
-        lockService.takeLock(accountId);
+        try {
+            lockService.takeLock(accountId);
 
-        Optional<Account> accountOptional = accountRepository.findById(accountId);
-        if (!accountOptional.isPresent()) {
-            logger.warn("PutMoneyService.findAccount: could not find account by id: " + accountId);
-            throw new NoRecordsFoundException();
+            Optional<Account> accountOptional = accountRepository.findById(accountId);
+            if (!accountOptional.isPresent()) {
+                logger.warn("PutMoneyService.findAccount: could not find account by id: " + accountId);
+                lockService.releaseLock(accountId);
+                throw new NoRecordsFoundException();
+            }
+
+            logger.info("PutMoneyService.findAccount - found account by id: {}. " +
+                    "Payload is: {}, Going to put value {}", accountId, accountOptional.get(), amount);
+
+            Account account = accountOptional.get();
+            account.setBalance(account.getBalance() + amount);
+
+            return  accountRepository.saveAndFlush(account).getId();
+
+        } finally {
+            lockService.releaseLock(accountId);
+
         }
-
-        logger.info("PutMoneyService.findAccount - found account by id: {}. " +
-                "Payload is: {}", accountId, accountOptional.get());
-
-        Account account = accountOptional.get();
-        account.setBalance(account.getBalance() + amount);
-
-        Integer finalId = accountRepository.save(account).getId();
-        lockService.releaseLock(accountId);
-        return finalId;
 
     }
 }

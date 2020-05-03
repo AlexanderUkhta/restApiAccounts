@@ -21,9 +21,14 @@ public class Account implements Serializable {
         @NotNull
         private Double balance = 0d;
 
-//        @Column(name = "currency", length = 3)
-//        @NotNull
-//        private String currency;
+        public Account () {}
+
+        public Account (Integer id, String ownerName, Double balance) {
+            this.id = id;
+            this.ownerName = ownerName;
+            this.balance = balance;
+
+        }
 
         public Integer getId() {
             return id;

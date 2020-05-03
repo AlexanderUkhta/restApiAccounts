@@ -26,38 +26,42 @@ public class TransferMoneyService {
     @Transactional
     public Map<String, Integer> transferMoney(final Integer sourceAccount, final Integer targetAccount,
                                               final Double amount) throws InterruptedException {
-        lockService.takeLock(sourceAccount < targetAccount ? sourceAccount : targetAccount);
-        lockService.takeLock(sourceAccount < targetAccount ? targetAccount : sourceAccount);
+        try {
+            lockService.takeLock(sourceAccount < targetAccount ? sourceAccount : targetAccount);
+            lockService.takeLock(sourceAccount < targetAccount ? targetAccount : sourceAccount);
 
-        Optional<Account> accountFromOptional = accountRepository.findById(sourceAccount);
-        if (!accountFromOptional.isPresent()) {
-            logger.warn("TransferMoneyService.findAccount: could not find source account by id: " + sourceAccount);
-            throw new NoRecordsFoundException();
+            Optional<Account> accountFromOptional = accountRepository.findById(sourceAccount);
+            if (!accountFromOptional.isPresent()) {
+                logger.warn("TransferMoneyService.findAccount: could not find source account by id: " + sourceAccount);
+                throw new NoRecordsFoundException();
+            }
+
+            Optional<Account> accountToOptional = accountRepository.findById(targetAccount);
+            if (!accountToOptional.isPresent()) {
+                logger.warn("TransferMoneyService.findAccount: could not find target account by id: " + targetAccount);
+                throw new NoRecordsFoundException();
+            }
+
+            if (Double.compare(accountFromOptional.get().getBalance(), amount) < 0) {
+                logger.warn("TransferMoneyService.findAccount: balance is less than desired transfer amount, id: " + sourceAccount);
+                throw new NotEnoughFundsException();
+            }
+
+            Account accountFrom = accountFromOptional.get();
+            Account accountTo = accountToOptional.get();
+            accountFrom.setBalance(accountFrom.getBalance() - amount);
+            accountTo.setBalance(accountTo.getBalance() + amount);
+
+            return new HashMap<String, Integer>() {{
+                put("sourceId", accountRepository.saveAndFlush(accountFrom).getId());
+                put("targetId", accountRepository.saveAndFlush(accountTo).getId());
+            }};
+
+        } finally {
+            lockService.releaseLock(sourceAccount);
+            lockService.releaseLock(targetAccount);
+
         }
-        Optional<Account> accountToOptional = accountRepository.findById(targetAccount);
-        if (!accountToOptional.isPresent()) {
-            logger.warn("TransferMoneyService.findAccount: could not find target account by id: " + targetAccount);
-            throw new NoRecordsFoundException();
-        }
-
-        if (Double.compare(accountFromOptional.get().getBalance(), amount) < 0) {
-            logger.warn("TransferMoneyService.findAccount: balance is less than desired transfer amount, id: " + sourceAccount);
-            throw new NotEnoughFundsException();
-        }
-
-        Account accountFrom = accountFromOptional.get();
-        Account accountTo = accountToOptional.get();
-        accountFrom.setBalance(accountFrom.getBalance() - amount);
-        accountTo.setBalance(accountTo.getBalance() + amount);
-
-        Map<String, Integer> resultMap = new HashMap<String, Integer>() {{
-            put("sourceId", accountRepository.save(accountFrom).getId());
-            put("targetId", accountRepository.save(accountTo).getId());
-        }};
-
-        lockService.releaseLock(sourceAccount);
-        lockService.releaseLock(targetAccount);
-        return resultMap;
 
     }
 
