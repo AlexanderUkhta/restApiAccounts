@@ -43,11 +43,14 @@ public class ApiControllerTest {
 
     @Before
     public void createBefore() throws Exception {
-        accountRepository.save(new Account(1, "Dave", 1100d));
-        accountRepository.save(new Account(2, "Nick", 1200d));
-        accountRepository.save(new Account(3, "Ben", 1300d));
-        accountRepository.save(new Account(4, "Sam", 1400d));
-        accountRepository.save(new Account(5, "Matthew", 1500d));
+        accountRepository.deleteAll();
+        Assert.assertEquals(0, accountRepository.count());
+
+        accountRepository.saveAndFlush(new Account(1, "Dave", 1100d));
+        accountRepository.saveAndFlush(new Account(2, "Nick", 1200d));
+        accountRepository.saveAndFlush(new Account(3, "Ben", 1300d));
+        accountRepository.saveAndFlush(new Account(4, "Sam", 1400d));
+        accountRepository.saveAndFlush(new Account(5, "Matthew", 1500d));
 
     }
 
@@ -195,6 +198,7 @@ public class ApiControllerTest {
         } catch (Exception e) {
             logger.warn("Error occurred while sending 'Withdraw-amount' request, trace: " + e);
         }
+
     }
 
     @Test
@@ -275,18 +279,18 @@ public class ApiControllerTest {
         Assert.assertEquals(
                 "Actual and desired account balances for acc 1 don't match after several 'Transfer-amount'",
                 1270d, account.get().getBalance(), 0.0);
+
         account = accountRepository.findById(2);
-        System.out.println(account.get());
         Assert.assertEquals(
                 "Actual and desired account balances for acc 2 don't match after several 'Transfer-amount'",
                 830d, account.get().getBalance(), 0.0);
+
         account = accountRepository.findById(3);
-        System.out.println(account.get());
         Assert.assertEquals(
                 "Actual and desired account balances for acc 3 don't match after several 'Transfer-amount'",
                 2000d, account.get().getBalance(), 0.0);
+
         account = accountRepository.findById(4);
-        System.out.println(account.get());
         Assert.assertEquals(
                 "Actual and desired account balances for acc 4 don't match after several 'Transfer-amount'",
                 900d, account.get().getBalance(), 0.0);
@@ -314,6 +318,7 @@ public class ApiControllerTest {
         } catch (Exception e) {
             logger.warn("Error occurred while sending 'Transfer-amount' request, trace: " + e);
         }
+
 
     }
     private void sendPutMoney(final Integer id, final Double amount) throws Exception {

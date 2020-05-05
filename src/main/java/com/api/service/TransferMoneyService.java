@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
@@ -35,12 +36,16 @@ public class TransferMoneyService {
                 logger.warn("TransferMoneyService.findAccount: could not find source account by id: " + sourceAccount);
                 throw new NoRecordsFoundException();
             }
+            logger.info("TransferMoneyService.findAccount - found account by id: {}. " +
+                    "Payload is: {}, Going to withdraw value {}", sourceAccount, accountFromOptional.get(), amount);
 
             Optional<Account> accountToOptional = accountRepository.findById(targetAccount);
             if (!accountToOptional.isPresent()) {
                 logger.warn("TransferMoneyService.findAccount: could not find target account by id: " + targetAccount);
                 throw new NoRecordsFoundException();
             }
+            logger.info("TransferMoneyService.findAccount - found account by id: {}. " +
+                    "Payload is: {}, Going to receive value {}", targetAccount, accountToOptional.get(), amount);
 
             if (Double.compare(accountFromOptional.get().getBalance(), amount) < 0) {
                 logger.warn("TransferMoneyService.findAccount: balance is less than desired transfer amount, id: " + sourceAccount);

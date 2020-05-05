@@ -24,6 +24,5 @@ public class LockService {
         if (lockMap.get(accountId).isHeldByCurrentThread()) {
             lockMap.get(accountId).unlock();
         }
-
     }
 }
