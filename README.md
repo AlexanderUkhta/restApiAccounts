@@ -12,4 +12,6 @@
 `/accounts/withdraw-amount` - снять деньги со счета. Принимает на вход Json с полями accountMain (id счета, куда положить) и amount.
 `/accounts/transfer-amount` - перевести деньги со счета на счет. Принимает на вход Json с полями accountMain (откуда переводить), accountExternal (куда переводить) и amount.
 
-Запуск приложения с тестами: ``
+Запуск приложения с тестами: `mvn -P test-then-run`
+Запуск приложения: `mvn spring-boot:run`
+

@@ -33,25 +33,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Sql({"/schema-test.sql"})
 public class ApiControllerTest {
     private static final Logger logger = LoggerFactory.getLogger(ApiControllerTest.class);
+    private ObjectMapper mapper = new ObjectMapper();
+    private HashMap<Integer, Account> accountsOld = new HashMap<>();
 
     @Autowired
     private MockMvc mockMvc;
     @Autowired
     private AccountRepository accountRepository;
-    private ObjectMapper mapper = new ObjectMapper();
-    private HashMap<Integer, Account> accountsOld = new HashMap<>();
 
     @Before
     public void createBefore() throws Exception {
-        accountRepository.deleteAll();
-        Assert.assertEquals(0, accountRepository.count());
-
         accountRepository.saveAndFlush(new Account(1, "Dave", 1100d));
         accountRepository.saveAndFlush(new Account(2, "Nick", 1200d));
         accountRepository.saveAndFlush(new Account(3, "Ben", 1300d));
         accountRepository.saveAndFlush(new Account(4, "Sam", 1400d));
         accountRepository.saveAndFlush(new Account(5, "Matthew", 1500d));
-
     }
 
     @Test
@@ -84,7 +80,6 @@ public class ApiControllerTest {
 
     @Test
     public void putMoneyTest() {
-
         accountRepository.findAll()
                 .forEach(account -> {
                     CompletableFuture<Void> oneFuture = CompletableFuture.runAsync(() -> {
@@ -195,6 +190,7 @@ public class ApiControllerTest {
             Assert.assertEquals(404, response.getStatus());
             Assert.assertEquals("'Withdraw-amount' could not be processed, account does not exist.",
                     response.getContentAsString());
+
         } catch (Exception e) {
             logger.warn("Error occurred while sending 'Withdraw-amount' request, trace: " + e);
         }
@@ -203,7 +199,6 @@ public class ApiControllerTest {
 
     @Test
     public void transferMoneyTest_OK() {
-
         CompletableFuture<Void> oneFuture = CompletableFuture.runAsync(() -> {
             try {
                 MockHttpServletResponse response = sendTransferMoney(1, 2, 100d);
@@ -275,7 +270,6 @@ public class ApiControllerTest {
         }
 
         Optional<Account> account = accountRepository.findById(1);
-        System.out.println(account.get());
         Assert.assertEquals(
                 "Actual and desired account balances for acc 1 don't match after several 'Transfer-amount'",
                 1270d, account.get().getBalance(), 0.0);
